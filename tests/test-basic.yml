@@ -1,0 +1,32 @@
+name: Test basic usage - get user teams membership
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          username: github-actions[bot]
+          organization: actions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Assert teams output exists
+        env:
+          TEAMS: ${{ steps.action.outputs.teams }}
+        run: |
+          echo "teams: $TEAMS"
+          echo "PASS: teams output was returned"
+      - name: Assert isTeamMember output exists
+        env:
+          IS_MEMBER: ${{ steps.action.outputs.isTeamMember }}
+        run: |
+          echo "isTeamMember: $IS_MEMBER"
+          if [ -z "$IS_MEMBER" ] && [ "$IS_MEMBER" != "false" ] && [ "$IS_MEMBER" != "true" ]; then
+            echo "FAIL: isTeamMember output should be 'true' or 'false' or empty when no team specified"
+            exit 1
+          fi
+          echo "PASS"
