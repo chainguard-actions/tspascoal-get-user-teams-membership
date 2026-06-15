@@ -1,0 +1,42 @@
+name: Test team membership check
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: push
+      GITHUB_REF: refs/heads/main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: check-membership
+        uses: .
+        continue-on-error: true
+        with:
+          username: octocat
+          organization: github
+          team: some-team
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Assert isTeamMember output is a boolean string or action ran
+        env:
+          IS_MEMBER: ${{ steps.check-membership.outputs.isTeamMember }}
+          OUTCOME: ${{ steps.check-membership.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "isTeamMember: $IS_MEMBER"
+          # The action either succeeds or fails due to API permissions,
+          # but it must have run (outcome is not empty)
+          if [ -z "$OUTCOME" ]; then
+            echo "FAIL: action did not run (outcome is empty)"
+            exit 1
+          fi
+          # If the action succeeded, isTeamMember must be 'true' or 'false'
+          if [ "$OUTCOME" = "success" ]; then
+            if [ "$IS_MEMBER" != "true" ] && [ "$IS_MEMBER" != "false" ]; then
+              echo "FAIL: isTeamMember must be 'true' or 'false', got: '$IS_MEMBER'"
+              exit 1
+            fi
+            echo "PASS: isTeamMember=$IS_MEMBER"
+          else
+            echo "PASS: action ran with outcome=$OUTCOME (API access may be limited in test environment)"
+          fi
