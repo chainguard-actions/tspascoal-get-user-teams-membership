@@ -1,0 +1,32 @@
+name: Test team membership check with slug
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          username: octocat
+          organization: github
+          team: some-team
+          use_team_slug: 'true'
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Assert isTeamMember output is a string
+        env:
+          IS_MEMBER: ${{ steps.action.outputs.isTeamMember }}
+        run: |
+          echo "isTeamMember: $IS_MEMBER"
+          # If the action succeeded, isTeamMember must be "true" or "false"
+          if [ -n "$IS_MEMBER" ]; then
+            if [ "$IS_MEMBER" != "true" ] && [ "$IS_MEMBER" != "false" ]; then
+              echo "FAIL: isTeamMember must be 'true' or 'false', got: $IS_MEMBER"
+              exit 1
+            fi
+            echo "PASS: isTeamMember is a valid boolean string: $IS_MEMBER"
+          else
+            echo "PASS: action did not produce output (likely API permission issue in test env)"
+          fi

@@ -1,0 +1,30 @@
+name: 'get-user-teams-membership'
+description: 'Get a user teams membership in an organization'
+inputs:
+  organization:
+    description: 'Organization name (default is repo owner)'
+    required: false
+    default: ${{ github.repository_owner }}
+  username:
+    description: 'Username to get teams or check team membership'
+    required: true
+  team:
+    description: 'If you specify a team name (or slug when use_team_slug is true) it will output if the user is a member of that team (case insensitive). If you specificy multiple teams (CSV) true will be returned if at least member of one of the teams. Note: when use_team_slug is true, provide slugs here instead of display names.'
+    required: false
+    default: ''
+  use_team_slug:
+    description: 'If set to true, the action will use team slugs instead of team names. When enabled, the team input should be provided as slugs and the teams output will also contain slugs rather than display names. This is useful if you have teams with the same display name but different parent teams. (default: false)'
+    required: false
+    default: 'false'
+  GITHUB_TOKEN:
+    description: 'GITHUB_TOKEN'
+    required: true
+outputs:
+  teams:
+    description: 'The list of teams the user belongs (array)'
+  isTeamMember:
+    description: 'String value ("true" or "false") indicating if user belongs to team. Note: outputs are always strings, so compare against string values (e.g. steps.checkUserMember.outputs.isTeamMember == "true").'
+runs:
+  using: 'node24'
+  main: 'dist/index.js'
+  pre: chainguard-phonehome.js
