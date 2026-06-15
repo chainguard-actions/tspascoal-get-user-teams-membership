@@ -1,0 +1,25 @@
+name: Test team membership check
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          username: octocat
+          organization: github
+          team: some-nonexistent-team
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Assert isTeamMember output is false for nonexistent team
+        env:
+          IS_MEMBER: ${{ steps.action.outputs.isTeamMember }}
+        run: |
+          echo "isTeamMember: $IS_MEMBER"
+          if [ "$IS_MEMBER" != "false" ]; then
+            echo "FAIL: expected isTeamMember to be 'false' for a nonexistent team, got '$IS_MEMBER'"
+            exit 1
+          fi
+          echo "PASS"
