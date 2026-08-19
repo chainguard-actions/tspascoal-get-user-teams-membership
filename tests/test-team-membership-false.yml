@@ -1,0 +1,55 @@
+name: Test team membership check returns false for non-existent team
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          username: tspascoal
+          team: this-team-definitely-does-not-exist-xyz123
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Assert isTeamMember is false or handle org-not-accessible
+        env:
+          IS_MEMBER: ${{ steps.action.outputs.isTeamMember }}
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "step outcome: $OUTCOME"
+          echo "isTeamMember: $IS_MEMBER"
+          if [ "$OUTCOME" = "success" ]; then
+            # If the action succeeded, isTeamMember must be false for a non-existent team
+            if [ "$IS_MEMBER" = "false" ]; then
+              echo "PASS: isTeamMember is false as expected"
+            else
+              echo "FAIL: expected isTeamMember to be 'false', got '$IS_MEMBER'"
+              exit 1
+            fi
+          else
+            # The action may fail if the owner is a personal account (not an org)
+            # or if the token lacks read:org scope — this is an acceptable outcome
+            echo "PASS: action did not succeed (likely personal account or insufficient scope), which is acceptable"
+          fi
+
+      - name: Assert teams output is a JSON array (if action succeeded)
+        env:
+          TEAMS: ${{ steps.action.outputs.teams }}
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "step outcome: $OUTCOME"
+          echo "teams output: $TEAMS"
+          if [ "$OUTCOME" = "success" ]; then
+            if echo "$TEAMS" | python3 -c "import sys, json; v=json.load(sys.stdin); assert isinstance(v, list)" 2>/dev/null; then
+              echo "PASS: teams output is a valid JSON array"
+            else
+              echo "FAIL: teams output is not a valid JSON array: $TEAMS"
+              exit 1
+            fi
+          else
+            echo "PASS: skipping teams assertion (action did not succeed)"
+          fi

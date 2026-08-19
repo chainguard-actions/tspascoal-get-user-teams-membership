@@ -1,4 +1,4 @@
-name: Test team membership check
+name: Test multiple teams membership check (CSV)
 on:
   workflow_dispatch:
 jobs:
@@ -7,27 +7,29 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Check team membership for a user
+      - name: Check membership across multiple teams (CSV)
         id: action
         uses: .
         with:
           organization: actions
           username: github-actions[bot]
-          team: some-team
+          team: team-alpha,team-beta,team-gamma
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
 
-      - name: Assert isTeamMember output is boolean-like when action succeeds
+      - name: Assert isTeamMember output is boolean-like for CSV teams
         env:
           IS_MEMBER: ${{ steps.action.outputs.isTeamMember }}
+          TEAMS: ${{ steps.action.outputs.teams }}
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           echo "isTeamMember: $IS_MEMBER"
+          echo "teams: $TEAMS"
           if [ "$OUTCOME" = "success" ]; then
-            # isTeamMember should be 'true' or 'false'
+            # isTeamMember should be 'true' or 'false' when team input is provided
             if [ "$IS_MEMBER" = "true" ] || [ "$IS_MEMBER" = "false" ]; then
-              echo "PASS: isTeamMember is a valid boolean value: $IS_MEMBER"
+              echo "PASS: isTeamMember is a valid boolean value for CSV teams: $IS_MEMBER"
             else
               echo "FAIL: isTeamMember should be 'true' or 'false', got: $IS_MEMBER"
               exit 1
