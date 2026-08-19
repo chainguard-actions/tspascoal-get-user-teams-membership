@@ -1,0 +1,126 @@
+# Runs unit and integration tests on push and pull request to default branch.
+# Run both on the same job, they are so fast no need to parallelize it
+name: tests
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches: 'master'
+  push:
+    branches: 'master'
+
+jobs:
+  test:
+    runs-on: ubuntu-slim
+    if: github.actor != 'dependabot[bot]'
+    
+    env:
+      user: tspascoal
+      check-team: 'Team-1'
+      check-more-than-one-team: 'Team-No-Users, Team-1'
+      check-not-team: 'dummy2314332'
+      failed: "false"
+      organization: get-user-teams-membership-tests
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: install, test and build
+        run: |
+          npm ci
+          npm test -- --run
+          npm run build
+
+      - name: Get Token
+        id: get_workflow_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.CLIENT_ID }}
+          private-key: ${{ secrets.APPLICATION_PRIVATE_KEY }}
+          owner: ${{ env.organization }}
+
+      - name: Get Teams
+        uses: ./
+        id: get-teams
+        with:
+          organization: ${{ env.organization }}
+          username: tspascoal
+          GITHUB_TOKEN: ${{ steps.get_workflow_token.outputs.token }}
+
+      - name: validate teams
+        env:
+          TEAMS_OUTPUT: ${{ steps.get-teams.outputs.teams }}
+          USER_NAME: ${{ env.user }}
+        run: |
+            echo "found teams $TEAMS_OUTPUT"
+            numberTeams=$(echo "$TEAMS_OUTPUT" | jq length)
+            if [ $numberTeams != 4 ]; then
+              echo "Expected 4 team  membership for $USER_NAME" >> $GITHUB_SUMMARY
+              failed="true"
+            fi
+
+            if diff \
+              < $(echo '["Team-1","Team-Secret","Parent","Child"]' | jq --sort-keys .) \
+              < $(echo "$TEAMS_OUTPUT" | jq --sort-keys .) ; then
+
+              echo "Teams mismatch $TEAMS_OUTPUT" >> $GITHUB_SUMMARY
+              failed="true"
+            fi
+
+            echo "failed=$failed" >> $$GITHUB_ENV
+
+      - name: check if member of ${{ env.check-team }}
+        uses: ./
+        id: check-teams-success
+        with:
+          organization: ${{ env.organization }}
+          username: tspascoal
+          team: ${{ env.check-team }}
+          GITHUB_TOKEN: ${{ steps.get_workflow_token.outputs.token }}
+
+      - name: Not a team member? Fail
+        if: ${{ steps.check-teams-success.outputs.isTeamMember == 'false' }}
+        env:
+          CHECK_TEAM: ${{ env.check-team }}
+        run: |
+          echo "Expected to belong to $CHECK_TEAM. Failing" >> $GITHUB_SUMMARY
+          echo "failed=true" >> $GITHUB_ENV
+
+      #################### Check if it belongs to at least one of two teams
+      - name: check if member of ${{ env.check-more-than-one-team }}
+        uses: ./
+        id: check-more-than-one-team-success
+        with:
+          organization: ${{ env.organization }}
+          username: tspascoal
+          team: ${{ env.check-more-than-one-team }}
+          GITHUB_TOKEN: ${{ steps.get_workflow_token.outputs.token }}
+
+      - name: Not a team member in at least one of the teams? Fail
+        if: ${{ steps.check-more-than-one-team-success.outputs.isTeamMember == 'false' }}
+        run: |
+          echo "Expected to belong to at least one team. Failing" >> $GITHUB_SUMMARY
+          echo "failed=true" >> $$GITHUB_ENV
+      ####################
+
+      - name: check if member of ${{ env.check-not-team }} should not be
+        uses: ./
+        id: check-not-team
+        with:
+          organization: ${{ env.organization }}
+          username: tspascoal
+          team: ${{ env.check-not-team }}
+          GITHUB_TOKEN: ${{ steps.get_workflow_token.outputs.token }}
+
+      - name: Dummy Team membership? Fail
+        if: ${{ steps.check-not-team.outputs.isTeamMember == 'true' }}
+        env:
+          CHECK_NOT_TEAM: ${{ env.check-not-team }}
+        run: |
+          echo "Should not belong to $CHECK_NOT_TEAM. Failing" >> $GITHUB_SUMMARY
+          echo "failed=true" >> $GITHUB_ENV
+
+      - name: Tests failed?
+        if: ${{ env.failed == 'true' }}
+        run:
+          exit 1

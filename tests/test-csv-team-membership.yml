@@ -1,4 +1,4 @@
-name: Test team membership check
+name: Test CSV multi-team membership check
 on:
   workflow_dispatch:
 jobs:
@@ -6,27 +6,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: check_member
+      - id: check_csv_member
         uses: .
         continue-on-error: true
         with:
           username: tspascoal
-          team: maintainers
+          team: maintainers,contributors,owners
           GITHUB_TOKEN: ${{ github.token }}
       - name: Assert action ran and either succeeded or failed gracefully
         env:
-          OUTCOME: ${{ steps.check_member.outcome }}
-          IS_MEMBER: ${{ steps.check_member.outputs.isTeamMember }}
-          TEAMS: ${{ steps.check_member.outputs.teams }}
+          OUTCOME: ${{ steps.check_csv_member.outcome }}
+          IS_MEMBER: ${{ steps.check_csv_member.outputs.isTeamMember }}
+          TEAMS: ${{ steps.check_csv_member.outputs.teams }}
         run: |
           echo "outcome: $OUTCOME"
-          echo "isTeamMember: $IS_MEMBER"
+          echo "isTeamMember (CSV teams): $IS_MEMBER"
           echo "teams: $TEAMS"
           if [ "$OUTCOME" = "success" ]; then
             echo "Action succeeded, validating outputs..."
             # isTeamMember must be 'true' or 'false'
             if [ "$IS_MEMBER" = "true" ] || [ "$IS_MEMBER" = "false" ]; then
-              echo "PASS: isTeamMember is a valid boolean string: $IS_MEMBER"
+              echo "PASS: isTeamMember is a valid boolean string for CSV teams: $IS_MEMBER"
             else
               echo "FAIL: isTeamMember should be 'true' or 'false', got: $IS_MEMBER"
               exit 1

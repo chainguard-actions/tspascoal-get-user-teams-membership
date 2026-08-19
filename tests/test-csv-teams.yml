@@ -1,4 +1,4 @@
-name: Test basic - get user teams membership
+name: Test CSV team membership check
 on:
   workflow_dispatch:
 jobs:
@@ -6,35 +6,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: get-teams
+      - id: check-csv-teams
         uses: .
         continue-on-error: true
         with:
           organization: tspascoal
           username: tspascoal
+          team: nonexistent-team-abc,nonexistent-team-xyz
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Assert action ran and produced a result or failed gracefully
         env:
-          OUTCOME: ${{ steps.get-teams.outcome }}
-          IS_MEMBER: ${{ steps.get-teams.outputs.isTeamMember }}
-          TEAMS: ${{ steps.get-teams.outputs.teams }}
+          OUTCOME: ${{ steps.check-csv-teams.outcome }}
+          IS_MEMBER: ${{ steps.check-csv-teams.outputs.isTeamMember }}
         run: |
           echo "outcome: $OUTCOME"
           echo "isTeamMember: $IS_MEMBER"
-          echo "teams: $TEAMS"
           # The action either succeeds (with valid token) or fails gracefully (auth error)
           # Under act, the token won't have read:org scope, so failure is expected
           if [ "$OUTCOME" = "success" ]; then
-            # If it succeeded, verify outputs are valid
-            if [ -z "$TEAMS" ]; then
-              echo "FAIL: expected teams output to be set on success"
-              exit 1
-            fi
+            # If it succeeded, verify isTeamMember is a valid boolean string
             if [ "$IS_MEMBER" != "true" ] && [ "$IS_MEMBER" != "false" ]; then
               echo "FAIL: expected isTeamMember to be 'true' or 'false', got '$IS_MEMBER'"
               exit 1
             fi
-            echo "PASS: action succeeded with valid outputs"
+            echo "PASS: action succeeded with valid isTeamMember output: $IS_MEMBER"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (expected under act without read:org token)"
           else
