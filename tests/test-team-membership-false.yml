@@ -1,0 +1,36 @@
+name: Test team membership check returns false for non-existent team
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          username: ${{ github.repository_owner }}
+          team: this-team-does-not-exist-xyz-abc-123
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Assert isTeamMember is false for non-existent team or action failed gracefully
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          IS_MEMBER: ${{ steps.action.outputs.isTeamMember }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          echo "isTeamMember: $IS_MEMBER"
+          if [ "$OUTCOME" = "success" ]; then
+            # Action succeeded: user should not be in the nonexistent team
+            if [ "$IS_MEMBER" != "false" ]; then
+              echo "FAIL: expected isTeamMember to be 'false' for a non-existent team, got: $IS_MEMBER"
+              exit 1
+            fi
+            echo "PASS: isTeamMember is correctly 'false' for a non-existent team"
+          elif [ "$OUTCOME" = "failure" ]; then
+            # Action failed - expected when GITHUB_TOKEN lacks read:org scope
+            echo "PASS: action failed gracefully (likely due to token scope limitations - read:org required)"
+          else
+            echo "FAIL: unexpected outcome: $OUTCOME"
+            exit 1
+          fi

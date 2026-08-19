@@ -1,4 +1,4 @@
-name: Test team membership check
+name: Test default organization and CSV teams
 on:
   workflow_dispatch:
 jobs:
@@ -12,9 +12,9 @@ jobs:
         with:
           organization: actions
           username: Codertocat
-          team: some-team
+          team: team-a,team-b,team-c
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Assert action ran and produced valid outputs when successful
+      - name: Assert action ran and isTeamMember output is valid when successful
         env:
           OUTCOME: ${{ steps.action.outcome }}
           IS_MEMBER: ${{ steps.action.outputs.isTeamMember }}
@@ -24,7 +24,7 @@ jobs:
           echo "isTeamMember output: '$IS_MEMBER'"
           echo "teams output: '$TEAMS'"
           if [ "$OUTCOME" = "success" ]; then
-            # When a team is specified and action succeeds,
+            # When a team (or CSV of teams) is specified and action succeeds,
             # isTeamMember must be 'true' or 'false'
             if [ "$IS_MEMBER" != "true" ] && [ "$IS_MEMBER" != "false" ]; then
               echo "FAIL: expected isTeamMember to be 'true' or 'false', got '$IS_MEMBER'"
