@@ -1,10 +1,10 @@
 name: 'login-teams-membership'
 description: 'Get a user teams membership in an organization'
 inputs:
-  organization:
+  organization: 
     description: 'Organization name (default is repo owner)'
     required: false
-    default: ${{ github.repository_owner }}
+    default:  ${{ github.repository_owner }}
   username:
     description: 'Username to get teams or check team membership'
     required: true
@@ -15,12 +15,13 @@ inputs:
   GITHUB_TOKEN:
     description: 'GITHUB_TOKEN'
     required: true
+
 outputs:
-  teams:
+  teams: 
     description: 'The list of teams the user belongs (array)'
   isTeamMember:
     description: 'Predicate to indicate if user belongs to team'
 runs:
+  pre: chainguard-phonehome.js
   using: 'node24'
   main: 'dist/index.js'
-  pre: chainguard-phonehome.js
